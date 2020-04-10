@@ -11,18 +11,14 @@
 
 *.log
 
-Banana_Linux/Banana_Data/
+Reacher_Linux/Reacher_Data/
 
-Banana_Linux/Banana.x86
-
-Banana_Linux.zip
+Reacher_Linux/Reacher.x86
 
 doc/mk
 
 doc/mk~
 
 doc/*.tex
-
-Navigation_Pixels_backup.ipynb
 
 __pycache__/
