@@ -3,6 +3,7 @@ import random
 #from collections import namedtuple, deque
 
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
@@ -29,6 +30,7 @@ class Agent():
         self.state_size = state_size
         self.action_size = action_size
         self.seed = random.seed(seed)
+        self.action_limits = [-1,1]     # Min, Max of all action values
 
         # Policy and Optimizer
         self.policy = Policy(state_size, action_size, seed).to(device)
@@ -98,6 +100,50 @@ class Agent():
         # this is desirable because we have normalized our rewards
         return torch.mean(clipped_surrogate + beta*entropy)
 
+    def collect_trajectories(self, env, tmax=200):
+        """ Collect a random trajectory. 
+
+        Params
+        ======
+            env (reacher_env):  Environment
+            tmax (int):         Maximum number of time steps to perform
+        """
+
+        state_list  = []
+        reward_list = []
+        prob_list   = []
+        action_list = []
+
+        # Get current state (i.e., resets have to be performed from the outside
+        state = env.vector_observations
+
+        for t in range(tmax):
+            # Get actions for current state
+            probs = self.policy(state).squeeze().cpu().detach().numpy()
+            act_max, act_min = self.action_limits
+            action = [act_max - act_min] * probs - [act_max + act_min]/2
+                                        
+            env_info = env.step(action)[brain_name]
+            next_state = env_info.vector_observations
+            reward = env_info.rewards
+            is_done = env_info.local_done
+        
+            # store the result
+            state_list.append(state)
+            reward_list.append(reward)
+            prob_list.append(probs)
+            action_list.append(action)
+        
+            # stop if any of the trajectories is done
+            # we want all the lists to be retangular
+            if is_done.any():
+                break
+
+        # return pi_theta, states, actions, rewards
+        return prob_list, state_list, \
+                action_list, reward_list
+
+        
     def save(self, filename):
         """Saves the agent to the local workplace
 
