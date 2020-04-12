@@ -37,14 +37,18 @@ class Agent():
         self.optimizer = optim.Adam(self.policy.parameters(), lr=LR)
 
     
-    def act(self, state, eps=0.):
+    def act(self, state):
         """Returns actions for given state as per current policy.
         
         Params
         ======
             state (array_like): current state
-            eps (float): epsilon, for epsilon-greedy action selection
         """
+        # Get actions for current state, transformed from probabilities
+        probs = self.policy(state).squeeze().cpu().detach().numpy()
+        act_min, act_max = self.action_limits
+        action = (act_max - act_min) * (probs - 0.5) + (act_max + act_min)/2
+        return action
 
     def clipped_surrogate(self, old_probs, states, actions, rewards, 
                           gamma=GAMMA, epsilon=EPSILON, beta=BETA):
@@ -57,7 +61,7 @@ class Agent():
             actions     List of actions
             rewards     List of rewards
             gamma       Discount factor for rewards
-            epsilon     For epsilon-greedy policy
+            epsilon     For clipping of surrogate function
             beta        Weight factor for entropy
         """
         
@@ -83,7 +87,7 @@ class Agent():
         ratio = new_probs/old_probs 
         
         # Clipping the function
-        clip = torch.clamp(ratio, 1-epsion, 1+epsilon)
+        clip = torch.clamp(ratio, 1-epsilon, 1+epsilon)
         clipped_surrogate = torch.min(ratio*rewards, clip*rewards)
 
 
@@ -100,12 +104,13 @@ class Agent():
         # this is desirable because we have normalized our rewards
         return torch.mean(clipped_surrogate + beta*entropy)
 
-    def collect_trajectories(self, env, tmax=200):
+    def collect_trajectories(self, env, brain_name, tmax=200):
         """ Collect a random trajectory. 
 
         Params
         ======
             env (reacher_env):  Environment
+            brain_name:         Brain name to apply to env
             tmax (int):         Maximum number of time steps to perform
         """
 
@@ -114,19 +119,20 @@ class Agent():
         prob_list   = []
         action_list = []
 
+        env_info = env.reset(train_mode=True)[brain_name]
         # Get current state (i.e., resets have to be performed from the outside
-        state = env.vector_observations
+        state = torch.from_numpy(env_info.vector_observations).float().unsqueeze(0).to(device)
+
+        #print(f"State: {state}")
 
         for t in range(tmax):
-            # Get actions for current state
-            probs = self.policy(state).squeeze().cpu().detach().numpy()
-            act_max, act_min = self.action_limits
-            action = [act_max - act_min] * probs - [act_max + act_min]/2
+            # Get actions for current state, transformed from probabilities
+            action = self.act(state)
                                         
             env_info = env.step(action)[brain_name]
-            next_state = env_info.vector_observations
+            next_state = torch.from_numpy(env_info.vector_observations).float().unsqueeze(0).to(device)
             reward = env_info.rewards
-            is_done = env_info.local_done
+            is_done = env_info.local_done[0]
         
             # store the result
             state_list.append(state)
@@ -136,7 +142,7 @@ class Agent():
         
             # stop if any of the trajectories is done
             # we want all the lists to be retangular
-            if is_done.any():
+            if is_done:
                 break
 
         # return pi_theta, states, actions, rewards
