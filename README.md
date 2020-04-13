@@ -10,7 +10,7 @@ Solution to the second project of Udacity's [Deep Reinforcement Learning](https:
 
 A reward +0.1 is given for each time step where the agent's "hand" is in the goal position. It is thus the goal of the agent to track the moving target region as closely as possible, for as long as possible.
 
-The observation space size is 33. The continuous action space size is 4, where each action corresponds to a value in [-1,1].  
+The observation space size is 33, corresponding to position, rotation, velocity, and angular velocities of the arm. The continuous action space size is 4, where each action corresponds to a value in [-1,1].  
 
 In the current version, a single actor is to be trained. The environment is solved with an average reward of +30 over 100 consecutive periods.  
 
