@@ -22,4 +22,6 @@ In order to run the Jupyter Notebook `Continuous_Control.ipynb`, please see the 
 
 To run the notebook, you also have to download the `Reacher` environment from Udacity's [project page](https://github.com/udacity/deep-reinforcement-learning/tree/master/p2_continuous-control). If your system is not Linux, please adjust the respective line of code in the beginning of `Continuous_Control.ipynb` to point to your environment.
 
+### Running the code
 
+To run the code, please open `Continuous_Control.ipynb` as a Jupyter notebook and follow the instructions given therein.
