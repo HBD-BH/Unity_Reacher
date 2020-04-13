@@ -29,9 +29,10 @@ class Actor(nn.Module):
     def forward(self, state):
         ''' Forward pass through the network, returns the action '''
         
+        x = state
         # Forward through each layer in `hidden_layers`, with ReLU activation
         for linear in self.hidden_layers:
-            x = F.relu(linear(state))
+            x = F.relu(linear(x))
         
         x = self.output(x)
         
@@ -71,12 +72,13 @@ class Critic(nn.Module):
     def forward(self, state, action):
         ''' Forward pass through the network, returns the max Q value'''
         
-        # State is input into first layer
-        x = F.relu(self.hidden_layers[0](state))
+        # State is input into first layer, convert everything to float tensors
+        x = F.relu(self.hidden_layers[0](state)).float()
+        action = action.float()
         
         # Action comes as additional input for second layer
         x = torch.cat((x, action), dim=1)
-        x = F.relu(self.hidden_layers[1](x)
+        x = F.relu(self.hidden_layers[1](x))
 
         # Forward through each other layer in `hidden_layers`, with ReLU activation
         if len(self.hidden_layers)>2:
