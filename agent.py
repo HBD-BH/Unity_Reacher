@@ -45,10 +45,11 @@ class Agent():
             state (array_like): current state
         """
         # Get actions for current state, transformed from probabilities
+        #state = torch.from_numpy(state).float().unsqueeze(0).to(device)
         probs = self.policy(state).squeeze().cpu().detach().numpy()
         act_min, act_max = self.action_limits
         action = (act_max - act_min) * (probs - 0.5) + (act_max + act_min)/2
-        return action
+        return action, probs
 
     def clipped_surrogate(self, old_probs, states, actions, rewards, 
                           gamma=GAMMA, epsilon=EPSILON, beta=BETA):
@@ -64,6 +65,7 @@ class Agent():
             epsilon     For clipping of surrogate function
             beta        Weight factor for entropy
         """
+        #print(f"Clipping surrogate with old_probs: {old_probs}, states: {states}, actions: {actions}, rewards: {rewards}.")
         
         # Convert rewards to future rewards
         discount = gamma**np.arange(len(rewards))
@@ -79,9 +81,19 @@ class Agent():
         actions = torch.tensor(actions, dtype=torch.int8, device=device)
         old_probs = torch.tensor(old_probs, dtype=torch.float, device=device)
         rewards = torch.tensor(rewards_normalized, dtype=torch.float, device=device)
+        #print(f"old probs: {old_probs}")
 
         # Get new probabilities according to current policy
-        new_probs = self.policy(states)
+        new_probs = []
+        for i, st in enumerate(states):
+            #print(f"State in surrogate: {st}")
+            _, prob = self.act(st)
+            #print(f"New prob in for-loop: {prob}")
+            new_probs.append(prob)
+
+        new_probs = torch.tensor(new_probs, dtype=torch.float, device=device)
+        #print(f"new probs: {new_probs}")
+
 
         # Ratio for clipping
         ratio = new_probs/old_probs 
@@ -121,13 +133,15 @@ class Agent():
 
         env_info = env.reset(train_mode=True)[brain_name]
         # Get current state (i.e., resets have to be performed from the outside
-        state = torch.from_numpy(env_info.vector_observations).float().unsqueeze(0).to(device)
+        state = torch.from_numpy(env_info.vector_observations[0]).float().unsqueeze(0).to(device)
+        #print(f"First state: {state}")
 
         #print(f"State: {state}")
 
+        print(f"State in collect_trajectories: {state}")
         for t in range(tmax):
             # Get actions for current state, transformed from probabilities
-            action = self.act(state)
+            action, probs = self.act(state)
                                         
             env_info = env.step(action)[brain_name]
             next_state = torch.from_numpy(env_info.vector_observations).float().unsqueeze(0).to(device)
@@ -140,6 +154,7 @@ class Agent():
             prob_list.append(probs)
             action_list.append(action)
         
+            state = next_state
             # stop if any of the trajectories is done
             # we want all the lists to be retangular
             if is_done:
