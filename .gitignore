@@ -7,7 +7,7 @@
 
 .*.*.un~
 
-#.ipynb_checkpoints/
+.ipynb_checkpoints/
 
 *.log
 
@@ -24,3 +24,5 @@ doc/*.tex
 __pycache__/
 
 agent_backup.py
+
+
