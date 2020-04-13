@@ -4,7 +4,7 @@ import torch.nn.functional as F
 
 # Similar to Deep Q-Network lecture exercise and the PyTorch extracurricular Content
 class Actor(nn.Module):
-    def __init__(self, input_size, output_size, seed, hidden_layers=[64,64]):
+    def __init__(self, input_size, output_size, seed, hidden_layers=[128,128]):
         ''' Builds a feedforward network with arbitrary hidden layers.
         Actor: state --> action
         
@@ -19,10 +19,11 @@ class Actor(nn.Module):
         self.seed = torch.manual_seed(seed)
         # Add the first layer, input to a hidden layer
         self.hidden_layers = nn.ModuleList([nn.Linear(input_size, hidden_layers[0])])
+        self.hidden_layers.extend([nn.BatchNorm1d(hidden_layers[0])])
         
-        # Add a variable number of more hidden layers
+        # Add a variable number of more hidden layers, including normalization for each layer
         layer_sizes = zip(hidden_layers[:-1], hidden_layers[1:])
-        self.hidden_layers.extend([nn.Linear(h1, h2) for h1, h2 in layer_sizes])
+        self.hidden_layers.extend([nn.Linear(h1, h2), nn.BatchNorm1d(h2) for h1, h2 in layer_sizes])
         
         self.output = nn.Linear(hidden_layers[-1], output_size)
         
@@ -32,7 +33,7 @@ class Actor(nn.Module):
         x = state
         # Forward through each layer in `hidden_layers`, with ReLU activation
         for linear in self.hidden_layers:
-            x = F.relu(linear(x))
+            x = F.selu(linear(x))
         
         x = self.output(x)
         
@@ -73,17 +74,17 @@ class Critic(nn.Module):
         ''' Forward pass through the network, returns the max Q value'''
         
         # State is input into first layer, convert everything to float tensors
-        x = F.relu(self.hidden_layers[0](state)).float()
+        x = F.selu(self.hidden_layers[0](state)).float()
         action = action.float()
         
         # Action comes as additional input for second layer
         x = torch.cat((x, action), dim=1)
-        x = F.relu(self.hidden_layers[1](x))
+        x = F.selu(self.hidden_layers[1](x))
 
         # Forward through each other layer in `hidden_layers`, with ReLU activation
         if len(self.hidden_layers)>2:
             for linear in self.hidden_layers[2:]:
-                x = F.relu(linear(x))
+                x = F.selu(linear(x))
         
         x = self.output(x)
         
