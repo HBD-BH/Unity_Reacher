@@ -10,10 +10,10 @@ import torch.nn.functional as F
 import torch.optim as optim
 
 BUFFER_SIZE = int(1e5)  # replay buffer size
-BATCH_SIZE = 128         # minibatch size
+BATCH_SIZE = 256         # minibatch size
 GAMMA = 0.9            # Discount factor
-TAU = 5e-4              # For soft update of target parameters
-LR = 5e-4               # Learning rate for actor and critic
+TAU = 2e-3              # For soft update of target parameters
+LR = 1e-3               # Learning rate for actor and critic
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -117,6 +117,7 @@ class Agent():
         # Minimize the critic loss
         self.critic_optimizer.zero_grad()
         critic_loss.backward()
+        torch.nn.utils.clip_grad_norm_(self.critic_local.parameters(), 1) # As mentioned on project page
         self.critic_optimizer.step()
 
         # ------------------- update actor ------------------- #
@@ -156,9 +157,9 @@ class Agent():
 
         checkpoint = {'input_size': self.state_size,
               'output_size': self.action_size,
-              'actor_hidden_layers': [each.out_features for each in self.actor_local.hidden_layers],
+              'actor_hidden_layers': [each.out_features for each in self.actor_local.hidden_layers if each._get_name()!='BatchNorm1d'],
               'actor_state_dict': self.actor_local.state_dict(),
-              'critic_hidden_layers': [each.out_features for each in self.critic_local.hidden_layers],
+              'critic_hidden_layers': [each.out_features for each in self.critic_local.hidden_layers if each._get_name()!='BatchNorm1d'],
               'critic_state_dict': self.critic_local.state_dict()}
 
         torch.save(checkpoint, filename)
@@ -179,15 +180,16 @@ class Agent():
         if not checkpoint['output_size'] == self.action_size:
             print(f"Error when loading weights from checkpoint {filename}: output size {checkpoint['output_size']} doesn't match action space size of agent {self.action_size}")
             return None
-        my_actor_hidden_layers = [each.out_features for each in self.actor_local.hidden_layers]
+        my_actor_hidden_layers = [each.out_features for each in self.actor_local.hidden_layers if each._get_name()!='BatchNorm1d']
         if not checkpoint['actor_hidden_layers'] == my_actor_hidden_layers:
-            print(f"Error when loading weights from checkpoint {filename}: actor hidden layers {checkpoint['hidden_layers']} don't match agent's actor hidden layers {my_actor_hidden_layers}")
+            print(f"Error when loading weights from checkpoint {filename}: actor hidden layers {checkpoint['actor_hidden_layers']} don't match agent's actor hidden layers {my_actor_hidden_layers}")
             return None
-        my_critic_hidden_layers = [each.out_features for each in self.critic_local.hidden_layers]
+        my_critic_hidden_layers = [each.out_features for each in self.critic_local.hidden_layers if each._get_name()!='BatchNorm1d']
         if not checkpoint['critic_hidden_layers'] == my_critic_hidden_layers:
             print(f"Error when loading weights from checkpoint {filename}: critic hidden layers {checkpoint['critic_hidden_layers']} don't match agent's critic hidden layers {my_critic_hidden_layers}")
             return None
-        self.policy.load_state_dict(checkpoint['state_dict'])
+        self.actor_local.load_state_dict(checkpoint['actor_state_dict'])
+        self.critic_local.load_state_dict(checkpoint['critic_state_dict'])
 
 class ReplayBuffer:
     """Fixed-size buffer to store experience tuples."""

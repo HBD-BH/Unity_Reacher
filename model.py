@@ -2,9 +2,11 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from itertools import chain
+
 # Similar to Deep Q-Network lecture exercise and the PyTorch extracurricular Content
 class Actor(nn.Module):
-    def __init__(self, input_size, output_size, seed, hidden_layers=[128,128]):
+    def __init__(self, input_size, output_size, seed, hidden_layers=[64,64]):
         ''' Builds a feedforward network with arbitrary hidden layers.
         Actor: state --> action
         
@@ -23,7 +25,7 @@ class Actor(nn.Module):
         
         # Add a variable number of more hidden layers, including normalization for each layer
         layer_sizes = zip(hidden_layers[:-1], hidden_layers[1:])
-        self.hidden_layers.extend([nn.Linear(h1, h2), nn.BatchNorm1d(h2) for h1, h2 in layer_sizes])
+        self.hidden_layers.extend(list(chain.from_iterable((nn.Linear(h1, h2), nn.BatchNorm1d(h2)) for h1, h2 in layer_sizes)))
         
         self.output = nn.Linear(hidden_layers[-1], output_size)
         
