@@ -66,27 +66,6 @@ class Agent():
             experiences = self.memory.sample()
             self.learn(experiences, GAMMA)
 
-    def act(self, state):
-        """Returns actions for given state as per current policy.
-        
-        Params
-        ======
-            state (array_like): current state
-        """
-        state = torch.from_numpy(state).float().unsqueeze(0).to(device)
-        self.actor_local.eval()
-
-        # Get actions for current state, transformed from probabilities
-        #state = torch.from_numpy(state).float().unsqueeze(0).to(device)
-        with torch.no_grad():
-            probs = self.actor_local(state)#.cpu().detach().numpy()
-        self.actor_local.train()
-
-        #  Transform probability into valid action ranges
-        act_min, act_max = self.action_limits
-        action = (act_max - act_min) * (probs - 0.5) + (act_max + act_min)/2
-        return action
-
     def learn(self, experiences, gamma):
         """Update value parameters using given batch of experience tuples.
         This will happen for critic and actor.
@@ -146,6 +125,27 @@ class Agent():
         """
         for target_param, local_param in zip(target_model.parameters(), local_model.parameters()):
             target_param.data.copy_(tau*local_param.data + (1.0-tau)*target_param.data)
+
+    def act(self, state):
+        """Returns actions for given state as per current policy.
+        
+        Params
+        ======
+            state (array_like): current state
+        """
+        state = torch.from_numpy(state).float().unsqueeze(0).to(device)
+        self.actor_local.eval()
+
+        # Get actions for current state, transformed from probabilities
+        #state = torch.from_numpy(state).float().unsqueeze(0).to(device)
+        with torch.no_grad():
+            probs = self.actor_local(state)#.cpu().detach().numpy()
+        self.actor_local.train()
+
+        #  Transform probability into valid action ranges
+        act_min, act_max = self.action_limits
+        action = (act_max - act_min) * (probs - 0.5) + (act_max + act_min)/2
+        return action
 
     def save(self, filename):
         """Saves the agent to the local workplace
