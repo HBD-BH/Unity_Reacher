@@ -82,7 +82,7 @@ class Agent():
         # Get actions for current state, transformed from probabilities
         #state = torch.from_numpy(state).float().unsqueeze(0).to(device)
         with torch.no_grad():
-            probs = self.actor_local(state).cpu().data().numpy()
+            probs = self.actor_local(state)#.cpu().detach().numpy()
         self.actor_local.train()
 
         #  Transform probability into valid action ranges

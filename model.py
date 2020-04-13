@@ -26,12 +26,12 @@ class Actor(nn.Module):
         
         self.output = nn.Linear(hidden_layers[-1], output_size)
         
-    def forward(self, x):
-        ''' Forward pass through the network, returns the output logits '''
+    def forward(self, state):
+        ''' Forward pass through the network, returns the action '''
         
         # Forward through each layer in `hidden_layers`, with ReLU activation
         for linear in self.hidden_layers:
-            x = F.relu(linear(x))
+            x = F.relu(linear(state))
         
         x = self.output(x)
         
@@ -58,7 +58,7 @@ class Critic(nn.Module):
         if len(hidden_layers)==1:
             hidden_layers = [hidden_layers, hidden_layers]
         # Add the first layer, input to a hidden layer
-        self.hidden_layers = nn.ModuleList([nn.Linear(input_size, hidden_layers[0])])
+        self.hidden_layers = nn.ModuleList([nn.Linear(state_size, hidden_layers[0])])
         self.hidden_layers.extend([nn.Linear(hidden_layers[0] + action_size, hidden_layers[1])])
         
         # Add a variable number of more hidden layers
@@ -68,12 +68,20 @@ class Critic(nn.Module):
         # We want to estimate max Q value, so only 1 single output node.
         self.output = nn.Linear(hidden_layers[-1], 1)
         
-    def forward(self, x):
-        ''' Forward pass through the network, returns the output logits '''
+    def forward(self, state, action):
+        ''' Forward pass through the network, returns the max Q value'''
         
-        # Forward through each layer in `hidden_layers`, with ReLU activation
-        for linear in self.hidden_layers:
-            x = F.relu(linear(x))
+        # State is input into first layer
+        x = F.relu(self.hidden_layers[0](state))
+        
+        # Action comes as additional input for second layer
+        x = torch.cat((x, action), dim=1)
+        x = F.relu(self.hidden_layers[1](x)
+
+        # Forward through each other layer in `hidden_layers`, with ReLU activation
+        if len(self.hidden_layers)>2:
+            for linear in self.hidden_layers[2:]:
+                x = F.relu(linear(x))
         
         x = self.output(x)
         
