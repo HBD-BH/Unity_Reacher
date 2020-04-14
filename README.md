@@ -25,3 +25,7 @@ To run the notebook, you also have to download the `Reacher` environment from Ud
 ### Running the code
 
 To run the code, please open `Continuous_Control.ipynb` as a Jupyter notebook and follow the instructions given therein.
+
+### Documentation
+
+You find a report with a more detailed description of the implementation in the [doc](doc) subfolder.
